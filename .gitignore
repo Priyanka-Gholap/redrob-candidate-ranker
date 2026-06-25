@@ -1,0 +1,31 @@
+# Node dependencies and build files
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Python caches and virtual environments
+backend/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+venv/
+env/
+.env
+
+# Large dataset files (to prevent GitHub push failures)
+backend/data/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.project
+.settings/
+*.log

@@ -1,0 +1,53 @@
+# Redrob Hackathon — Submission Metadata
+
+team_name: "Redrob-AI-Engineers"  # REPLACE WITH YOUR REGISTERED TEAM NAME
+
+primary_contact:
+  name: "Priyanka Durvesh"        # REPLACE WITH YOUR NAME
+  email: "priyanka@example.com"   # REPLACE WITH YOUR EMAIL (Used for all organizer communication)
+  phone: "+91-XXXXXXXXXX"        # REPLACE WITH YOUR PHONE NUMBER (Used for top-50 / top-10 outreach)
+
+team_members:
+  - name: "Priyanka Durvesh"
+    email: "priyanka@example.com"
+    role: "Team Lead & ML Engineer"
+
+github_repo: "https://github.com/PriyankaDurvesh/redrob-candidate-ranker" # REPLACE WITH YOUR GITHUB REPO URL
+
+sandbox_link: "https://huggingface.co/spaces/PriyankaDurvesh/redrob-ranker" # REPLACE WITH YOUR HOSTED SANDBOX LINK
+
+reproduce_command: "python backend/rank.py --candidates ./backend/data/[PUB] India_runs_data_and_ai_challenge/India_runs_data_and_ai_challenge/candidates.jsonl --out ./submission.csv"
+
+compute:
+  platform: "Local Windows PC"
+  cpu_cores: 8
+  ram_gb: 16
+  python_version: "3.13.7"
+  os: "Windows 11"
+  uses_gpu_for_inference: false                 # Must be false
+  has_network_during_ranking: false             # Must be false
+  pre_computation_required: false               # false since we run retrieve-and-rerank dynamically under 90s!
+  pre_computation_time_minutes: 0
+
+ai_tools_used:
+  - "Gemini"
+  - "Claude"
+
+ai_usage_summary: |
+  Used Gemini and Claude for codebase architecture discussion, implementing python algorithms, 
+  and designing the Next.js frontend styling. No candidate data was sent to any external API 
+  during ranking.
+
+methodology_summary: |
+  We implemented a robust two-stage retrieve-and-rerank candidate discovery engine:
+  1. Fast Retrieval: We run a Python term-matching index that filters the 100,000 candidate database down to the top 1,000 matches in under 1 second.
+  2. Honeypot Filtering: Logic checks detect and blacklist 70 impossible profiles (mismatched experience duration, expert skills with 0 months used).
+  3. Semantic Reranking: We run a local SentenceTransformer (all-MiniLM-L6-v2) on CPU ONLY to compute semantic match scores for the top 1,000 matches.
+  4. Heuristics: Multipliers adjust rankings based on sweet-spot experience (5-9 years), location/relocation, notice period, and active platform activity, applying a heavy penalty for consulting-only history. The pipeline runs in ~80 seconds.
+
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true                     # Set to true since we have explicit checks
+  reproduction_tested: true
