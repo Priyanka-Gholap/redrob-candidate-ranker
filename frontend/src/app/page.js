@@ -18,6 +18,8 @@ Core Requirements:
 - Nice to have: LLM fine-tuning (LoRA, QLoRA, PEFT) and learning-to-rank models.`;
 
 export default function Home() {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
   const [activeTab, setActiveTab] = useState("ranking"); // ranking, analytics, compare, jd
   const [jdText, setJdText] = useState(DEFAULT_JD);
   const [loading, setLoading] = useState(false);
@@ -49,7 +51,7 @@ export default function Home() {
   const runRanking = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/rank", {
+      const res = await fetch(`${API_URL}/api/rank`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -64,7 +66,7 @@ export default function Home() {
       setCandidates(data.results || []);
     } catch (err) {
       console.error(err);
-      alert("Error: Make sure the backend FastAPI server is running on 127.0.0.1:8000!");
+      alert(`Error: Make sure the backend FastAPI server is running at ${API_URL}!`);
     } finally {
       setLoading(false);
     }
@@ -73,13 +75,13 @@ export default function Home() {
   const runComparison = async () => {
     setCompareLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/compare?keyword=${encodeURIComponent(keyword)}`);
+      const res = await fetch(`${API_URL}/api/compare?keyword=${encodeURIComponent(keyword)}`);
       if (!res.ok) throw new Error("Failed to compute comparison");
       const data = await res.json();
       setCompareResults(data);
     } catch (err) {
       console.error(err);
-      alert("Error: Make sure the backend FastAPI server is running on 127.0.0.1:8000!");
+      alert(`Error: Make sure the backend FastAPI server is running at ${API_URL}!`);
     } finally {
       setCompareLoading(false);
     }

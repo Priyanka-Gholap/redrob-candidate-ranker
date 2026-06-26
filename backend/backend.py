@@ -81,13 +81,22 @@ def startup_event():
     print("API Startup: Loading dataset...")
     start_time = time.time()
     
-    if not os.path.exists(candidates_path):
+    # Check if a small pre-filtered dataset exists (for fast production deployment)
+    small_candidates_path = os.path.join(BASE_DIR, "top_1000_candidates.jsonl")
+    target_path = candidates_path
+    using_small_pool = False
+    
+    if os.path.exists(small_candidates_path):
+        target_path = small_candidates_path
+        using_small_pool = True
+        print(f"API Startup: Small candidates pool found at {small_candidates_path}. Using it for fast startup.")
+    elif not os.path.exists(candidates_path):
         print(f"API WARNING: Candidates file not found at {candidates_path}. API endpoints will fail.")
         return
         
     # 1. Load candidates and identify honeypots
-    print("API Startup: Loading candidates and identifying honeypots...")
-    with open(candidates_path, 'r', encoding='utf-8') as f:
+    print("API Startup: Loading candidates...")
+    with open(target_path, 'r', encoding='utf-8') as f:
         for line in f:
             if not line.strip():
                 continue
@@ -95,55 +104,58 @@ def startup_event():
             cid = cand["candidate_id"]
             candidates_by_id[cid] = cand
             
-            # Identify honeypots
-            profile = cand["profile"]
-            history = cand["career_history"]
-            skills = cand["skills"]
-            
-            is_honeypot = False
-            
-            # Check 1: Expert/Advanced skill with 0 duration
-            for s in skills:
-                if s["proficiency"] in ["expert", "advanced"] and s.get("duration_months", 0) == 0:
-                    is_honeypot = True
-                    break
-            
-            if not is_honeypot:
-                # Check 2: Experience discrepancy
-                total_exp = profile.get("years_of_experience", 0)
-                history_months = sum(job.get("duration_months", 0) for job in history)
-                history_years = history_months / 12.0
-                if abs(total_exp - history_years) > 1.0:
-                    is_honeypot = True
-                    
-            if not is_honeypot:
-                # Check 3: Job-level date anomalies
-                for job in history:
-                    start = job.get("start_date")
-                    end = job.get("end_date")
-                    dur = job.get("duration_months", 0)
-                    
-                    try:
-                        start_dt = datetime.strptime(start, "%Y-%m-%d")
-                        if end:
-                            end_dt = datetime.strptime(end, "%Y-%m-%d")
-                            expected_months = (end_dt.year - start_dt.year) * 12 + (end_dt.month - start_dt.month)
-                            if abs(dur - expected_months) > 2:
-                                is_honeypot = True
-                                break
-                        else:
-                            expected_months = (PRESENT_DATE.year - start_dt.year) * 12 + (PRESENT_DATE.month - start_dt.month)
-                            if dur > expected_months + 2:
-                                is_honeypot = True
-                                break
-                    except Exception:
+            if using_small_pool:
+                active_candidates.append(cand)
+            else:
+                # Identify honeypots
+                profile = cand["profile"]
+                history = cand["career_history"]
+                skills = cand["skills"]
+                
+                is_honeypot = False
+                
+                # Check 1: Expert/Advanced skill with 0 duration
+                for s in skills:
+                    if s["proficiency"] in ["expert", "advanced"] and s.get("duration_months", 0) == 0:
                         is_honeypot = True
                         break
+                
+                if not is_honeypot:
+                    # Check 2: Experience discrepancy
+                    total_exp = profile.get("years_of_experience", 0)
+                    history_months = sum(job.get("duration_months", 0) for job in history)
+                    history_years = history_months / 12.0
+                    if abs(total_exp - history_years) > 1.0:
+                        is_honeypot = True
                         
-            if is_honeypot:
-                honeypots.add(cid)
-            else:
-                active_candidates.append(cand)
+                if not is_honeypot:
+                    # Check 3: Job-level date anomalies
+                    for job in history:
+                        start = job.get("start_date")
+                        end = job.get("end_date")
+                        dur = job.get("duration_months", 0)
+                        
+                        try:
+                            start_dt = datetime.strptime(start, "%Y-%m-%d")
+                            if end:
+                                end_dt = datetime.strptime(end, "%Y-%m-%d")
+                                expected_months = (end_dt.year - start_dt.year) * 12 + (end_dt.month - start_dt.month)
+                                if abs(dur - expected_months) > 2:
+                                    is_honeypot = True
+                                    break
+                            else:
+                                expected_months = (PRESENT_DATE.year - start_dt.year) * 12 + (PRESENT_DATE.month - start_dt.month)
+                                if dur > expected_months + 2:
+                                    is_honeypot = True
+                                    break
+                        except Exception:
+                            is_honeypot = True
+                            break
+                            
+                if is_honeypot:
+                    honeypots.add(cid)
+                else:
+                    active_candidates.append(cand)
                 
     print(f"API Startup: Loaded {len(candidates_by_id)} candidates. Blacklisted {len(honeypots)} honeypots. {len(active_candidates)} active.")
     
